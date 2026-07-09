@@ -8,7 +8,6 @@ function setupLeaveRejoin(bot, createBot) {
     let reconnectTimer = null
     let reconnectAttempts = 0
     let reconnecting = false
-    let manualDisconnect = false // true only when WE tell the bot to leave
 
     function cleanup() {
         if (jumpTimer) clearTimeout(jumpTimer)
@@ -25,7 +24,6 @@ function setupLeaveRejoin(bot, createBot) {
         jumpOffTimer = setTimeout(() => {
             bot.setControlState("jump", false)
         }, 300)
-        // Random jump every 20 seconds to 5 minutes
         jumpTimer = setTimeout(scheduleNextJump, randomMs(20000, 300000))
     }
 
@@ -53,18 +51,16 @@ function setupLeaveRejoin(bot, createBot) {
     bot.once("spawn", () => {
         reconnectAttempts = 0
         reconnecting = false
-        manualDisconnect = false
         cleanup()
         console.log("[AFK] Connected.")
         scheduleNextJump()
     })
 
+    // ANY end event (kick, disconnect, crash, network drop) -> always reconnect.
+    // There is no code path in this module that ever calls bot.quit()/bot.end(),
+    // so the bot can never leave the server on its own.
     bot.on("end", (reason) => {
         cleanup()
-        if (manualDisconnect) {
-            console.log("[AFK] Left intentionally, not reconnecting.")
-            return
-        }
         reconnect(`end:${reason}`)
     })
 
@@ -74,19 +70,8 @@ function setupLeaveRejoin(bot, createBot) {
 
     bot.on("kicked", (reason) => {
         console.log("[AFK] Kicked:", reason)
-        // "end" will fire right after this, and manualDisconnect is false,
-        // so it will reconnect on its own. No need to call reconnect() here too.
+        // "end" fires right after this and handles reconnect — no need to duplicate here
     })
-
-    // Call this from your own code whenever YOU want the bot to leave
-    // on purpose (e.g. a !leave command). This guarantees no auto-rejoin.
-    function leaveIntentionally(reason) {
-        manualDisconnect = true
-        cleanup()
-        bot.quit(reason || "disconnect.quitting")
-    }
-
-    return { leaveIntentionally }
 }
 
 module.exports = setupLeaveRejoin
