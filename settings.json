@@ -7,7 +7,7 @@
   },
   "server": {
     "ip": "emrekbelvcl.seedloaf.gg",
-    "port": 49179,
+    "port": 25565,
     "version": "1.20.1",
     "try-creative": false
   },
